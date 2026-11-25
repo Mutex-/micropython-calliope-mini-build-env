@@ -59,6 +59,30 @@ The scripts in `micropython/examples/` are written for the micro:bit and import 
 
 After `source env.sh`, `pip install <package>` installs into `.venv`. Without `env.sh`, `pip` is Arch's system pip, which refuses with "externally-managed-environment". `uv pip install <package>` also targets `.venv` once `env.sh` is sourced.
 
+### IDE support (type stubs)
+
+`stubs/` has type stubs for everything the firmware provides, so an editor can complete names, show signatures and docstrings, and flag mistakes such as `pin0.is_touched()` (pin0 isn't a touch pin) or a misspelt gesture name.
+
+- **Firmware modules:** `calliopemini` (and its alias `microbit`), `music`, `radio`, `neopixel`, `audio`, `speech`, `utime`, `machine`, `micropython`.
+- **Standard modules that differ in MicroPython:** `os`, `random`, `gc`, `time`. These replace CPython's versions, so the editor offers `os.size()` and `gc.mem_free()` but not `random.shuffle()`, which the board doesn't have.
+
+The stubs were checked against the board: every name they declare exists, every pin has the declared type, and the board has nothing they leave out. The `MicroBit*` classes in `calliopemini.pyi` describe the objects' types but aren't importable on the board.
+
+**VSCodium / VS Code (pyright, basedpyright or Pylance):** put a `pyrightconfig.json` in the folder with your scripts:
+
+```json
+{
+  "stubPath": "/path/to/this/repository/stubs",
+  "reportMissingModuleSource": "none"
+}
+```
+
+`reportMissingModuleSource` silences the "stub file found but no source" warning, which is expected for modules that only exist on the board.
+
+pyright also applies its static rules to your code, and those flag some dynamic patterns that run fine on the board: a list started as `[None] * 32` and filled later, a `dict.get()` result used as a number, attributes that start as `None`. 6 of the 31 examples trigger these, and `asmleds.py`'s inline assembler can't be type-checked at all. To keep completion and hover help without error checking, add `"typeCheckingMode": "off"`. The stubs themselves pass pyright's strict mode.
+
+**PyCharm:** mark `stubs/` as a sources root (right-click the folder, "Mark Directory as" > "Sources Root"), or add it to the interpreter paths.
+
 ## Docker / Podman
 
 The `Dockerfile` builds a toolchain-only image: Python 3.8, yotta and the pinned versions from `docker/requirements.txt`, ARM GCC 10.3 for amd64 or arm64, and the real `srecord`. The source tree isn't copied into the image. It's bind-mounted when the container runs.
