@@ -43,6 +43,16 @@ micropython/tools/pyboard.py /dev/ttyACM0 ../scripts/test.py   # runs it, prints
 
 `pyboard.py` needs pyserial, which `setup.sh` installs into `.venv`. Close any `picocom` session first: two programs on one serial port each get part of the data.
 
+`pyboard.py` sends the script through the REPL, so the board holds the whole source text in RAM while compiling it. With about 9 KB free, scripts from roughly 3 KB up fail with `MemoryError: memory allocation failed` before their first line runs (the error has no line number). Copy those to the board's flash instead, where they compile without that copy:
+
+```sh
+ufs put robot.py            # then in the REPL: import robot
+ufs put robot.py main.py    # or as main.py: runs at every boot (Ctrl-C in the REPL stops it)
+ufs ls                      # list files; ufs rm <name> deletes one
+```
+
+`ufs` comes from microfs, which `setup.sh` installs. Flashing new firmware erases the files.
+
 The scripts in `micropython/examples/` are written for the micro:bit and import `microbit`. This firmware's module is `calliopemini`, and `microbit` is an alias for it, so they run unchanged. All 31 started without errors on a Calliope mini v1.
 
 ### Extra Python packages
