@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Minimal srec_cat replacement for yotta's post-link step:
+#   srec_cat IN.hex -intel -o OUT.hex -intel --line-length=N
+# Re-emits an Intel HEX file with 16-byte data records, laid out like srecord's
+# output: data, then the start-address record, then EOF. Order matters:
+# tools/adduicr.py treats the last two lines as the trailer and inserts the UICR
+# block before them.
+set -euo pipefail
+in="$1"; out=""
+while [ $# -gt 0 ]; do [ "$1" = "-o" ] && out="$2"; shift; done
+[ -n "$out" ] || { echo "srec_cat shim: no -o given" >&2; exit 1; }
+exec "$CALLIOPE_ENV/.venv/bin/python" -I -c '
+import io, sys, intelhex
+
+def rec(rtype, data):
+    b = bytes([len(data), 0, 0, rtype]) + data
+    return ":" + (b + bytes([(-sum(b)) & 0xFF])).hex().upper()
+
+h = intelhex.IntelHex(sys.argv[1])
+buf = io.StringIO()
+h.write_hex_file(buf, write_start_addr=False, byte_count=16)
+lines = buf.getvalue().splitlines()
+assert lines[-1] == ":00000001FF", "unexpected EOF record"
+start = h.start_addr or {}
+if "CS" in start:
+    lines.insert(-1, rec(0x03, start["CS"].to_bytes(2, "big") + start["IP"].to_bytes(2, "big")))
+elif "EIP" in start:
+    lines.insert(-1, rec(0x05, start["EIP"].to_bytes(4, "big")))
+with open(sys.argv[2], "w") as f:
+    f.write("\n".join(lines) + "\n")
+' "$in" "$out"

@@ -1,0 +1,452 @@
+<title>Calliope mini MicroPython</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: reference manual — sticky module index on the left, entries on the right; index becomes a chip row on phones. */
+:root {
+  --bg: #F5F6F3; --surface: #FFFFFF; --fg: #18211D; --muted: #57635D; --line: #DCE1DB;
+  --accent: #0F6B5C; --accent-soft: #E1EFEA; --code-bg: #EDF0EB;
+  --bad: #B3261E; --bad-soft: #FBE9E7; --warn: #8F5400; --warn-soft: #FAEFD9;
+  --led: #E5484D; --led-off: #E1E5DF;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --s-1: .8125rem; --s0: 1rem; --s1: 1.125rem; --s2: 1.375rem; --s3: 1.75rem; --s4: 2.4rem;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101513; --surface: #161D1A; --fg: #E3E9E5; --muted: #95A39C; --line: #29332F;
+  --accent: #5CC9B1; --accent-soft: #143029; --code-bg: #1B2421;
+  --bad: #F2847C; --bad-soft: #3A1D1B; --warn: #E8B25A; --warn-soft: #33280F;
+  --led: #FF5A5F; --led-off: #25302B; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #101513; --surface: #161D1A; --fg: #E3E9E5; --muted: #95A39C; --line: #29332F;
+  --accent: #5CC9B1; --accent-soft: #143029; --code-bg: #1B2421;
+  --bad: #F2847C; --bad-soft: #3A1D1B; --warn: #E8B25A; --warn-soft: #33280F;
+  --led: #FF5A5F; --led-off: #25302B; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: var(--s0); line-height: 1.55; }
+a { color: var(--accent); }
+code, pre, .sig { font-family: var(--f-mono); font-size: .875em; }
+code { background: var(--code-bg); padding: .08em .35em; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+header.top .wrap { padding-block: 2rem 1.5rem; display: grid; grid-template-columns: 1fr auto; gap: 1.25rem 2rem; align-items: end; }
+.eyebrow { font-size: var(--s-1); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+h1 { font-size: var(--s4); margin-top: .25rem; }
+.lede { color: var(--muted); max-width: 62ch; margin: .6rem 0 0; }
+.facts { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
+.chip { font-family: var(--f-mono); font-size: .75rem; background: var(--code-bg); border: 1px solid var(--line); border-radius: 999px; padding: .15rem .6rem; color: var(--fg); }
+
+.matrix { display: grid; grid-template-columns: repeat(5, 14px); gap: 5px; padding: 10px; background: var(--code-bg); border-radius: 8px; border: 1px solid var(--line); }
+.matrix i { width: 14px; height: 14px; border-radius: 3px; background: var(--led-off); }
+
+.search { grid-column: 1 / -1; display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.search input { flex: 1 1 280px; min-width: 0; font: inherit; padding: .65rem .85rem; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+.search .count { color: var(--muted); font-size: var(--s-1); font-variant-numeric: tabular-nums; }
+
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 2.5rem; padding-block: 2rem 4rem; }
+nav.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 1rem); align-self: start; display: flex; flex-direction: column; gap: .1rem; font-size: .9375rem; }
+nav.index .grp { font-size: var(--s-1); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: .9rem 0 .25rem; }
+nav.index .grp:first-child { margin-top: 0; }
+nav.index a { text-decoration: none; color: var(--fg); padding: .2rem .5rem; border-radius: 6px; font-family: var(--f-mono); font-size: .8125rem; }
+nav.index a:hover { background: var(--accent-soft); color: var(--accent); }
+nav.index a.dim { opacity: .35; }
+
+main { min-width: 0; display: flex; flex-direction: column; gap: 3rem; }
+section > h2 { font-size: var(--s3); display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+section > h2 .imp { font-family: var(--f-mono); font-size: .8125rem; font-weight: 400; color: var(--muted); }
+section > .intro { color: var(--muted); max-width: 68ch; margin: .5rem 0 1rem; }
+
+.entries { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.entry { padding: .85rem 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr); gap: .3rem; }
+.sig { font-weight: 600; color: var(--fg); overflow-wrap: anywhere; }
+.sig .n { color: var(--accent); }
+.entry .d { max-width: 72ch; }
+.entry .d p { margin: 0; }
+.entry .note { font-size: .9375rem; color: var(--warn); }
+.entry .note.bad { color: var(--bad); }
+
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: .75rem .9rem; margin: .35rem 0 0; overflow-x: auto; line-height: 1.5; position: relative; }
+.copy { position: absolute; top: .4rem; right: .4rem; font: 600 .7rem var(--f-body); letter-spacing: .04em; text-transform: uppercase; background: var(--surface); color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: .2rem .5rem; cursor: pointer; }
+.copy:hover { color: var(--accent); border-color: var(--accent); }
+
+.traps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: .9rem; }
+.trap { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .45rem; min-width: 0; }
+.trap h3 { font-size: var(--s1); }
+.trap p { margin: 0; font-size: .9375rem; }
+.sev { align-self: flex-start; font-size: .7rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; border-radius: 999px; padding: .1rem .55rem; }
+.sev.bad { background: var(--bad-soft); color: var(--bad); }
+.sev.warn { background: var(--warn-soft); color: var(--warn); }
+.sev.ok { background: var(--accent-soft); color: var(--accent); }
+
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: .9375rem; }
+th, td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: var(--s-1); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--code-bg); }
+tr:last-child td { border-bottom: 0; }
+td.mono { font-family: var(--f-mono); font-size: .8125rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.st { font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: .1rem .5rem; border-radius: 999px; white-space: nowrap; }
+.st.free { background: var(--accent-soft); color: var(--accent); }
+.st.busy { background: var(--warn-soft); color: var(--warn); }
+.st.blocked { background: var(--bad-soft); color: var(--bad); }
+
+.legend { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: .75rem; color: var(--muted); font-size: var(--s-1); }
+.empty { color: var(--muted); padding: 1rem 0; }
+footer { color: var(--muted); font-size: var(--s-1); border-top: 1px solid var(--line); padding-block: 1.5rem 3rem; }
+
+@media (max-width: 860px) {
+  header.top .wrap { grid-template-columns: 1fr; }
+  .matrix { display: none; }
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  nav.index { position: static; flex-direction: row; flex-wrap: wrap; gap: .35rem; }
+  nav.index .grp { display: none; }
+  nav.index a { border: 1px solid var(--line); background: var(--surface); }
+  h1 { font-size: var(--s3); }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">API reference · firmware 1.1.1 · v1.1.1-cmini_classic + local fixes</div>
+      <h1>Calliope mini MicroPython</h1>
+      <p class="lede">Every name this firmware exposes, taken from the compiled source rather than the micro:bit docs. Where the Calliope board differs from what the code assumes, the entry says so.</p>
+      <div class="facts">
+        <span class="chip">nRF51822 · 16 KB RAM</span>
+        <span class="chip">MicroPython 1.9.2</span>
+        <span class="chip">REPL 115200 baud</span>
+        <span class="chip">float32, no complex</span>
+      </div>
+    </div>
+    <div class="matrix" id="matrix" aria-label="LED matrix showing Image.HEART" role="img"></div>
+    <div class="search">
+      <input id="q" type="search" placeholder="Filter, e.g. read_analog, scroll, pin_RGB" autocomplete="off" aria-label="Filter the reference">
+      <span class="count" id="count"></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap layout">
+  <nav class="index" id="index" aria-label="Modules"></nav>
+  <main id="main">
+
+    <section id="traps" data-static>
+      <h2>Read this first</h2>
+      <p class="intro">The Calliope port changed the pin table but kept parts of the micro:bit's setup. Everything here was checked on a Calliope mini v1 on 25 Nov 2026. The green cards are bugs fixed in this build; the stock firmware still has them.</p>
+      <div class="traps">
+        <div class="trap"><span class="sev bad">Breaks code</span><h3>Import <code>calliopemini</code></h3><p>There is no <code>microbit</code> module, so <code>import microbit</code> raises <code>ImportError</code>. To keep micro:bit code working, use <code>import calliopemini as microbit</code>. The REPL already runs <code>from calliopemini import *</code>.</p></div>
+        <div class="trap"><span class="sev bad">AttributeError</span><h3>Only pin1 and pin2 are touch pins</h3><p><code>pin0</code> is digital only on this port, so <code>pin0.is_touched()</code> fails. Use <code>pin1</code> or <code>pin2</code>.</p></div>
+        <div class="trap"><span class="sev warn">Wrong pins</span><h3>SPI defaults sit on the LED rows</h3><p>The defaults pin13, pin14 and pin15 drive the matrix rows. Pass <code>sclk=</code>, <code>mosi=</code> and <code>miso=</code> explicitly, or turn the display off first.</p></div>
+        <div class="trap"><span class="sev warn">Silent</span><h3><code>audio</code> and <code>speech</code> play on pad P0</h3><p>Both default to <code>pin0</code>, so you hear nothing without an external speaker. For the onboard speaker, call <code>pin_M_SLEEP.write_digital(1)</code> and pass <code>pin=pin_M_IN1</code> to <code>audio.play()</code>. <code>speech</code> has no pin argument.</p></div>
+        <div class="trap"><span class="sev ok">Fixed in this build</span><h3>Accelerometer and compass</h3><p>The Calliope's Bosch BMX055 now has a driver, so readings, gestures and the compass work. The stock firmware has no driver and stops with panic <code>50</code> or <code>51</code> on the first read.</p></div>
+        <div class="trap"><span class="sev ok">Fixed in this build</span><h3><code>pin3</code> is usable</h3><p>It's an analog pin on the microphone's GPIO and reads the same as <code>pin_MIC</code>. The stock firmware locks it in display mode and raises <code>ValueError</code>.</p></div>
+        <div class="trap"><span class="sev ok">Fixed in this build</span><h3><code>pin16</code> and <code>pin17</code> analog reads</h3><p><code>read_analog()</code> works on P0.26 and P0.27. On the stock firmware it freezes the board, because mbed's ADC table stops at P0.6.</p></div>
+        <div class="trap"><span class="sev ok">Fixed in this build</span><h3>I2C on the Calliope's pins</h3><p>The bus defaults to pin20 (SDA) and pin19 (SCL), where the onboard sensors are, so <code>i2c.scan()</code> finds <code>0x10</code>, <code>0x18</code> and <code>0x68</code> without arguments. That also frees <code>pin0</code> and <code>pin_M_IN2</code>. The stock firmware uses the micro:bit's P0.30/P0.0.</p></div>
+        <div class="trap"><span class="sev ok">Fixed in this build</span><h3><code>music</code> plays on the speaker</h3><p><code>music.play()</code> and <code>music.pitch()</code> default to the onboard speaker and wake the motor driver only while sound plays. Pass <code>pin=pin0</code> for pad P0. The stock firmware plays on pad P0.</p></div>
+        <div class="trap"><span class="sev ok">New in this build</span><h3><code>gyroscope</code></h3><p>Rotation rates from the BMX055's gyroscope, in degrees per second. See <a href="#gyroscope">gyroscope</a>.</p></div>
+      </div>
+    </section>
+
+    <section id="pins" data-static>
+      <h2>Pin map <span class="imp">calliopemini.pin*</span></h2>
+      <p class="intro">Python name, the nRF51 GPIO it drives, and which methods it has. <strong>Digital</strong> pins have read/write digital, write_analog (PWM) and pull settings. <strong>Analog</strong> adds <code>read_analog()</code>, and <strong>touch</strong> adds <code>is_touched()</code> on top of that.</p>
+      <div class="tablebox">
+        <table id="pintable">
+          <thead><tr><th>Name</th><th>GPIO</th><th>Type</th><th>On the board</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="legend">
+        <span><span class="st free">free</span> usable directly</span>
+        <span><span class="st busy">shared</span> works, but something else also uses it</span>
+        <span><span class="st blocked">locked</span> raises <code>ValueError</code></span>
+      </div>
+    </section>
+
+    <div id="modules"></div>
+    <p class="empty" id="none" hidden>Nothing matches. Try a shorter term, like <code>pin</code> or <code>play</code>.</p>
+  </main>
+</div>
+
+<footer>
+  <div class="wrap">Generated from <code>calliope-edu/micropython-calliope-mini</code> @ <code>735e0f1</code> with <code>calliope-mini/microbit-dal</code> @ <code>v2.1.1-cminiclassic</code>. Method lists come from the firmware's own lookup tables; defaults come from its argument tables. Behaviour checked on a Calliope mini v1 on 25 Nov 2026, with local fixes for the BMX055 sensor, I2C pins, pin3 and pin16/pin17 analog reads, a gyroscope API, and the speaker as music's default output.</div>
+</footer>
+
+<script>
+const PINS = [
+  ["pin0","P0.0","digital","Pad P0. Default output for audio and speech","busy","shared"],
+  ["pin1","P0.1","touch","Pad P1","free","free"],
+  ["pin2","P0.2","touch","Pad P2","free","free"],
+  ["pin3","P0.3","analog","Same GPIO as the microphone (pin_MIC)","free","free"],
+  ["pin4","P0.4","analog","LED column 1","blocked","display"],
+  ["pin5","P0.5","analog","LED column 2","blocked","display"],
+  ["pin6","P0.6","analog","LED column 3","blocked","display"],
+  ["pin7","P0.7","digital","LED column 4","blocked","display"],
+  ["pin8","P0.8","digital","LED column 5. Not guarded: no error, but it fights the matrix","busy","display"],
+  ["pin9","P0.9","digital","LED column 6","blocked","display"],
+  ["pin10","P0.10","digital","LED column 7","blocked","display"],
+  ["pin11","P0.11","digital","LED column 8","blocked","display"],
+  ["pin12","P0.12","digital","LED column 9. Not guarded","busy","display"],
+  ["pin13","P0.13","digital","LED row 1; default SPI SCK","busy","display"],
+  ["pin14","P0.14","digital","LED row 2; default SPI MISO","busy","display"],
+  ["pin15","P0.15","digital","LED row 3; default SPI MOSI","busy","display"],
+  ["pin16","P0.26","analog","Labelled RX in the DAL","free","free"],
+  ["pin17","P0.27","analog","Labelled TX in the DAL","free","free"],
+  ["pin19","P0.19","digital","I2C SCL. Default bus, shared with the onboard BMX055","blocked","i2c"],
+  ["pin20","P0.20","digital","I2C SDA. Default bus, shared with the onboard BMX055","blocked","i2c"],
+  ["pin_btnA","P0.17","digital","Button A. read_digital() works; prefer button_a","busy","button"],
+  ["pin_btnB","P0.16","digital","Button B. read_digital() works; prefer button_b","busy","button"],
+  ["pin_RGB","P0.18","digital","RGB LED (WS2812). Use neopixel.NeoPixel(pin_RGB, 1)","free","free"],
+  ["pin_MIC","P0.3","analog","Microphone. read_analog() gives the level","free","free"],
+  ["pin_M_SLEEP","P0.28","digital","Motor driver enable. Held by music while it plays","busy","shared"],
+  ["pin_M_IN1","P0.29","digital","Motor driver input 1, drives the speaker. Default music output","busy","shared"],
+  ["pin_M_IN2","P0.30","digital","Motor driver input 2. Held low by music while it plays","busy","shared"],
+];
+
+/* Sections: id, title, import line, intro, entries [signature, description(html), note?, example?] */
+const D = (s, d, o = {}) => ({ s, d, ...o });
+const MODULES = [
+ { grp: "calliopemini", id: "board", t: "Board functions", imp: "from calliopemini import *", intro: "Top-level functions of the <code>calliopemini</code> module.", e: [
+  D("sleep(ms)", "Wait <code>ms</code> milliseconds. The display, music and radio keep running in the background."),
+  D("running_time()", "Milliseconds since the board powered on or reset."),
+  D("temperature()", "Temperature in °C as an int, read from the nRF51 die. It reads a few degrees above room temperature."),
+  D("scale(value, from_, to)", "Map <code>value</code> from one range to another, for example <code>scale(accel, from_=(-1024, 1024), to=(0, 9))</code>. Returns an int if both ends of <code>to</code> are ints, otherwise a float."),
+  D("panic(n)", "Stop and show error code <code>n</code> (0–255) on the display until reset."),
+  D("reset()", "Restart the board. Your script runs again from the top."),
+ ]},
+ { grp: "calliopemini", id: "display", t: "display", imp: "calliopemini.display", intro: "The 5×5 LED matrix. Brightness runs from 0 (off) to 9. Physically it's a 3×9 grid on pins 4–15, so those pins aren't free while it's on.", e: [
+  D("show(image, delay=400, *, wait=True, loop=False, clear=False)", "Show an <code>Image</code>, or a string, number or list of images one frame at a time with <code>delay</code> ms between frames. A single character or digit is shown without scrolling.", { ex: "display.show(Image.HAPPY)\ndisplay.show('Hallo', delay=300)\ndisplay.show(Image.ALL_CLOCKS, delay=100, loop=True, wait=False)" }),
+  D("scroll(text, delay=150, *, wait=True, loop=False, monospace=False)", "Scroll <code>text</code> across the screen. A smaller <code>delay</code> scrolls faster. Numbers are converted with <code>str()</code>."),
+  D("clear()", "Turn every LED off."),
+  D("set_pixel(x, y, value)", "Set the LED at column <code>x</code>, row <code>y</code> (both 0–4) to brightness 0–9."),
+  D("get_pixel(x, y)", "Brightness 0–9 of one LED."),
+  D("off()", "Stop the display and release its pins (pin4–pin12, except pin3) for other use."),
+  D("on()", "Turn the display back on and reclaim its pins."),
+  D("is_on()", "<code>True</code> while the display is running."),
+  D("read_light_level()", "Ambient light 0–255, measured with the LEDs themselves."),
+ ]},
+ { grp: "calliopemini", id: "image", t: "Image", imp: "calliopemini.Image", intro: "A grid of brightness values (0–9). Rows are separated by <code>:</code> in the string form, one digit per LED.", e: [
+  D("Image(string)", "Build from rows of digits, for example <code>Image('09090:99999:99999:09990:00900')</code> (the heart above).", { ex: "boat = Image('05050:05050:05050:99999:09990')\ndisplay.show(boat)" }),
+  D("Image(width=5, height=5)", "A blank image of the given size. Images can be wider than the screen and scrolled with <code>shift_left</code>."),
+  D("Image(width, height, buffer)", "An image filled from a <code>bytearray</code> of <code>width × height</code> values (0–9), row by row."),
+  D("width(), height()", "Size in LEDs."),
+  D("set_pixel(x, y, value), get_pixel(x, y)", "Write or read one pixel. Raises <code>TypeError</code> on the built-in constants, which are read-only. Use <code>.copy()</code> first."),
+  D("shift_left(n), shift_right(n), shift_up(n), shift_down(n)", "A new image moved by <code>n</code> pixels, with blanks filled in."),
+  D("crop(x, y, w, h)", "A new image cut out of this one."),
+  D("copy()", "An editable copy."),
+  D("invert()", "A new image with each value replaced by <code>9 − value</code>."),
+  D("fill(value)", "Set every pixel to <code>value</code> in place."),
+  D("blit(src, x, y, w, h, xdest=0, ydest=0)", "Copy a rectangle from <code>src</code> into this image in place."),
+  D("img1 + img2, img * n, img / n", "Add two images pixel by pixel (clipped at 9), or scale brightness by a number."),
+  D("Built-in images", "HEART, HEART_SMALL, HAPPY, SMILE, SAD, CONFUSED, ANGRY, ASLEEP, SURPRISED, SILLY, FABULOUS, MEH, YES, NO, CLOCK1–CLOCK12, ARROW_N, ARROW_NE, ARROW_E, ARROW_SE, ARROW_S, ARROW_SW, ARROW_W, ARROW_NW, TRIANGLE, TRIANGLE_LEFT, CHESSBOARD, DIAMOND, DIAMOND_SMALL, SQUARE, SQUARE_SMALL, RABBIT, COW, MUSIC_CROTCHET, MUSIC_QUAVER, MUSIC_QUAVERS, PITCHFORK, XMAS, PACMAN, TARGET, TSHIRT, ROLLERSKATE, DUCK, HOUSE, TORTOISE, BUTTERFLY, STICKFIGURE, GHOST, SWORD, GIRAFFE, SKULL, UMBRELLA, SNAKE, SCISSORS. The tuples <code>ALL_CLOCKS</code> and <code>ALL_ARROWS</code> hold whole sequences."),
+ ]},
+ { grp: "calliopemini", id: "buttons", t: "button_a, button_b", imp: "calliopemini.button_a", intro: "The two buttons, on P0.17 (A) and P0.16 (B). Presses are debounced and counted in the background.", e: [
+  D("is_pressed()", "<code>True</code> while the button is held down right now."),
+  D("was_pressed()", "<code>True</code> if it was pressed since the last call (or since boot). Calling it clears the flag.", { ex: "while True:\n    if button_a.was_pressed():\n        display.scroll('A')\n    sleep(20)" }),
+  D("get_presses()", "Number of presses since the last call, then resets the count to 0."),
+ ]},
+ { grp: "calliopemini", id: "pin-methods", t: "Pin methods", imp: "pin1.read_analog()", intro: "Methods on the pin objects. Which ones a pin has depends on its type in the pin map above.", e: [
+  D("write_digital(value)", "Drive the pin high (1) or low (0)."),
+  D("read_digital()", "Read 1 or 0."),
+  D("write_analog(value)", "Output a PWM signal with duty cycle 0–1023 (0 = off, 1023 = always on). Good for dimming an LED or speed control."),
+  D("set_analog_period(ms), set_analog_period_microseconds(us)", "Change the PWM period. Default is 20 ms, which suits hobby servos."),
+  D("get_analog_period_microseconds()", "Current PWM period in µs."),
+  D("read_analog()", "Voltage as 0–1023 (0 V to 3.3 V). Works on pin1, pin2, pin3, pin16, pin17, pin_MIC, and pin4–6 after <code>display.off()</code>."),
+  D("is_touched()", "<code>True</code> while a finger bridges the pin and GND. Only pin1 and pin2.", { note: "pin0 is not a touch pin on this port.", bad: true }),
+  D("set_pull(pull), get_pull()", "Set the internal resistor for reading: <code>pin.PULL_UP</code>, <code>pin.PULL_DOWN</code> or <code>pin.NO_PULL</code>."),
+  D("get_mode()", "What the pin is currently used for as a string: <code>'unused'</code>, <code>'write_digital'</code>, <code>'display'</code>, <code>'button'</code>, <code>'music'</code>, <code>'i2c'</code> and so on."),
+ ]},
+ { grp: "calliopemini", id: "rgb-motor", t: "RGB LED, mic, motor", imp: "calliopemini.pin_RGB", intro: "The extra onboard parts the Calliope port exposes as plain pins. There's no higher-level API for them yet.", e: [
+  D("neopixel.NeoPixel(pin_RGB, 1)", "The RGB LED is one WS2812 pixel. Colour values are 0–255 per channel, in the normal (r, g, b) order.", { ex: "import neopixel\nfrom calliopemini import pin_RGB\nled = neopixel.NeoPixel(pin_RGB, 1)\nled[0] = (0, 40, 30)\nled.show()" }),
+  D("pin_MIC.read_analog()", "Raw microphone level 0–1023. Sample it repeatedly and look at the spread to estimate loudness."),
+  D("Onboard speaker", "Driven through the motor driver. <code>music</code> plays here by default and wakes the driver only while sound plays. For <code>audio</code>, do it by hand: set <code>pin_M_SLEEP</code> high and pass <code>pin=pin_M_IN1</code>. Playing on <code>pin_M_IN2</code> is silent. <code>speech</code> has no pin argument and hasn't been tried on the speaker.", { ex: "import audio\nf = audio.AudioFrame()\nfor i in range(32): f[i] = 255 if i < 16 else 0\npin_M_SLEEP.write_digital(1)\naudio.play([f] * 250, pin=pin_M_IN1)\npin_M_SLEEP.write_digital(0)" }),
+  D("pin_M_SLEEP, pin_M_IN1, pin_M_IN2", "Motor driver lines. Setting <code>pin_M_SLEEP</code> high enables the driver; IN1/IN2 set direction, and <code>write_analog()</code> on one of them sets speed.", { note: "Driving a motor is untested." }),
+ ]},
+ { grp: "calliopemini", id: "accelerometer", t: "accelerometer", imp: "calliopemini.accelerometer", intro: "About 1024 per g, in the micro:bit's orientation: x is negative with the button A side down, y positive with the USB edge up, z negative lying face up. The sensor is read when you call these functions, so gestures register in a loop that keeps polling, not on a single call.", e: [
+  D("get_x(), get_y(), get_z()", "Acceleration along one axis, about ±1024 when that axis points straight up or down.", { ex: "while True:\n    if accelerometer.was_gesture('shake'):\n        display.show(Image.SURPRISED)\n    sleep(50)" }),
+  D("get_values()", "Tuple <code>(x, y, z)</code>."),
+  D("get_strength()", "Total acceleration in milli-g."),
+  D("current_gesture()", "One of <code>'up'</code>, <code>'down'</code>, <code>'left'</code>, <code>'right'</code>, <code>'face up'</code>, <code>'face down'</code>, <code>'freefall'</code>, <code>'3g'</code>, <code>'6g'</code>, <code>'8g'</code>, <code>'shake'</code>."),
+  D("is_gesture(name), was_gesture(name)", "Is the gesture happening now, or did it happen since the last call."),
+  D("get_gestures()", "Tuple of gestures since the last call, oldest first; clears the history."),
+  D("set_range(g)", "Measurement range in g (2, 4, 8 or 16). Readings stay at about 1024 per g."),
+ ]},
+ { grp: "calliopemini", id: "gyroscope", t: "gyroscope", imp: "calliopemini.gyroscope", intro: "Rotation rate in degrees per second from the BMX055's gyroscope, new in this build (the micro:bit has no gyroscope API). It uses the accelerometer's axes, and positive rates follow the right-hand rule around them.", e: [
+  D("get_x(), get_y(), get_z()", "Rate around one axis as an int, up to ±2000 °/s, and about 0 at rest. Turning a flat board clockwise (seen from above) gives a positive z; lifting the USB edge gives a negative x; lifting the button-B side gives a negative y.", { ex: "while True:\n    if abs(gyroscope.get_z()) > 90:\n        display.show(Image.SURPRISED)\n    else:\n        display.clear()\n    sleep(20)" }),
+  D("get_values()", "Tuple <code>(x, y, z)</code>, all read at the same moment. Raises <code>OSError</code> on a board without the sensor."),
+ ]},
+ { grp: "calliopemini", id: "compass", t: "compass", imp: "calliopemini.compass", intro: "Magnetometer, in nano-tesla. Calibrate before relying on it: the board's own parts add an offset of roughly 90 µT, more than the Earth's field.", e: [
+  D("heading()", "Degrees 0–359 from north. Starts the calibration game first if the compass isn't calibrated.", { note: "Heading accuracy hasn't been compared against a reference compass yet." }),
+  D("calibrate(), is_calibrated(), clear_calibration()", "Run, check or forget the tilt-to-fill calibration: tilt until all 25 LEDs are lit, then a smiley appears. The calibration is lost at every reset, so call <code>calibrate()</code> at the start of a program that needs <code>heading()</code>. Calibrate and use the compass away from laptops, monitors and steel furniture."),
+  D("get_x(), get_y(), get_z(), get_field_strength()", "Raw field values and their magnitude, in nano-tesla."),
+ ]},
+ { grp: "Buses", id: "i2c", t: "i2c", imp: "calliopemini.i2c", intro: "I2C controller. 7-bit addresses.", e: [
+  D("init(freq=100000, sda=pin20, scl=pin19)", "Configure the bus. The defaults are the Calliope's I2C pads, which the onboard BMX055 also uses (0x10, 0x18, 0x68).", { ex: "print([hex(a) for a in i2c.scan()])" }),
+  D("scan()", "List of addresses that answered."),
+  D("read(addr, n, repeat=False)", "Read <code>n</code> bytes; returns <code>bytes</code>. <code>repeat=True</code> skips the stop condition."),
+  D("write(addr, buf, repeat=False)", "Write a bytes-like buffer."),
+ ]},
+ { grp: "Buses", id: "spi", t: "spi", imp: "calliopemini.spi", intro: "SPI controller.", e: [
+  D("init(baudrate=1000000, bits=8, mode=0, *, sclk=pin13, mosi=pin15, miso=pin14)", "Configure the bus. <code>mode</code> 0–3 sets clock polarity and phase.", { note: "The default pins are the LED matrix rows. Pass free pins (e.g. pin1, pin2, pin16) and/or call display.off()." }),
+  D("write(buf)", "Send bytes."),
+  D("read(n, sendbyte=0)", "Read <code>n</code> bytes while sending <code>sendbyte</code>."),
+  D("write_readinto(out, in)", "Send <code>out</code> and fill <code>in</code> at the same time. Both buffers must be the same length."),
+ ]},
+ { grp: "Buses", id: "uart", t: "uart", imp: "calliopemini.uart", intro: "Serial port. By default it's the USB serial the REPL uses (TX P0.24, RX P0.25).", e: [
+  D("init(baudrate=9600, bits=8, parity=None, stop=1, *, pins=None, tx=None, rx=None)", "Reconfigure the port. <code>parity</code> is <code>None</code>, <code>uart.ODD</code> or <code>uart.EVEN</code>.", { note: "Calling init() takes the port away from the REPL. Reset the board (or call init(115200) without pins) to get it back." }),
+  D("any()", "<code>True</code> if received bytes are waiting."),
+  D("read([n]), readline(), readinto(buf[, n])", "Read what's available, up to the next newline, or into a buffer. Returns <code>None</code> on timeout."),
+  D("write(buf)", "Send a string or bytes; returns the number of bytes written."),
+ ]},
+ { grp: "Sound", id: "music", t: "music", imp: "import music", intro: "Notes and melodies as square waves. Notes are written <code>NOTE[octave][:duration]</code>, e.g. <code>'c4:4'</code>, <code>'r:2'</code> for a rest. Octave and duration carry over to the next note.", e: [
+  D("play(music, pin=pin_M_IN1, wait=True, loop=False)", "Play a list of notes, a single note string or a built-in tune. The default pin is the onboard speaker; pass <code>pin=pin0</code> for pad P0.", { ex: "import music\nmusic.play(['c4:4', 'e', 'g', 'c5:8'])\nmusic.play(music.NYAN, wait=False, loop=True)" }),
+  D("pitch(frequency, duration=-1, pin=pin_M_IN1, wait=True)", "Play one frequency in Hz. <code>duration=-1</code> plays until <code>stop()</code>."),
+  D("stop(pin=pin_M_IN1)", "Stop playback on that pin. Stopping the speaker also puts the motor driver back to sleep."),
+  D("set_tempo(ticks=4, bpm=120), get_tempo()", "A tick is the unit of note duration; defaults are 4 ticks per beat at 120 bpm. <code>get_tempo()</code> returns <code>(bpm, ticks)</code>."),
+  D("reset()", "Back to the default tempo, octave 4 and duration 4."),
+  D("Built-in tunes", "DADADADUM, ENTERTAINER, PRELUDE, ODE, NYAN, RINGTONE, FUNK, BLUES, BIRTHDAY, WEDDING, FUNERAL, PUNCHLINE, PYTHON, BADDY, CHASE, BA_DING, WAWAWAWAA, JUMP_UP, JUMP_DOWN, POWER_UP, POWER_DOWN"),
+ ]},
+ { grp: "Sound", id: "audio", t: "audio", imp: "import audio", intro: "Plays raw 8-bit sample frames at 7812.5 samples per second. Also available as <code>calliopemini.audio</code>.", e: [
+  D("play(source, wait=True, pin=pin0, return_pin=None)", "Play an iterable of <code>AudioFrame</code>s. Without <code>pin</code> it looks for a speaker wired between two of pin0–pin2, otherwise uses pin0.", { note: "For the onboard speaker, set pin_M_SLEEP high and pass pin=pin_M_IN1." }),
+  D("is_playing(), stop()", "Check or stop playback."),
+  D("AudioFrame()", "32 samples, each 0–255 (128 is silence). Index it like a list; supports <code>+</code>, <code>-</code>, <code>*</code> and <code>copyfrom(other)</code>."),
+ ]},
+ { grp: "Sound", id: "speech", t: "speech", imp: "import speech", intro: "A small speech synthesizer (SAM), English only. Output goes through <code>audio</code>, so it uses pin0 by default. It uses a lot of RAM.", e: [
+  D("say(words, *, pitch=64, speed=72, mouth=128, throat=128)", "Speak English text. Values run 0–255; lower <code>speed</code> talks faster."),
+  D("pronounce(phonemes, ...)", "Speak a phoneme string directly, for exact control."),
+  D("sing(phonemes, ...)", "Like <code>pronounce</code> but with <code>#NN</code> pitch markers before phonemes."),
+  D("translate(words)", "Return the phoneme string <code>say()</code> would use, for tweaking."),
+ ]},
+ { grp: "Radio & storage", id: "radio", t: "radio", imp: "import radio", intro: "Simple packet radio, compatible with micro:bit MicroPython radio on the same settings. It's off until you call <code>on()</code>.", e: [
+  D("on(), off(), reset()", "Start or stop the radio, or restore the default settings."),
+  D("config(length=32, queue=3, channel=7, power=6, address=0x75626974, group=0, data_rate=radio.RATE_1MBIT)", "Change settings (any subset). <code>channel</code> 0–83, <code>power</code> 0–7, <code>length</code> up to 251 bytes. Only devices with the same channel, address, group and data rate hear each other.", { ex: "import radio\nradio.on()\nradio.config(group=23)\nradio.send('hallo')\nmsg = radio.receive()   # None if nothing arrived" }),
+  D("send(text), receive()", "Send or receive a string. <code>receive()</code> returns <code>None</code> if the queue is empty."),
+  D("send_bytes(buf), receive_bytes(), receive_bytes_into(buf)", "The same with raw bytes."),
+  D("receive_full()", "<code>(bytes, rssi, timestamp_us)</code> for the next packet, or <code>None</code>."),
+  D("RATE_250KBIT, RATE_1MBIT, RATE_2MBIT", "Data rate constants."),
+ ]},
+ { grp: "Radio & storage", id: "files", t: "open, os", imp: "import os", intro: "A small flat filesystem in flash. It survives power-off but is wiped when you flash new firmware.", e: [
+  D("open(name, mode='r')", "Modes <code>'r'</code>, <code>'w'</code>, <code>'rb'</code>, <code>'wb'</code>. Files support <code>read</code>, <code>readline</code>, <code>readinto</code>, <code>write</code>, <code>close</code> and <code>with</code>.", { ex: "with open('score.txt', 'w') as f:\n    f.write('42')\nwith open('score.txt') as f:\n    print(f.read())" }),
+  D("os.listdir()", "List of file names."),
+  D("os.remove(name), os.size(name)", "Delete a file, or get its size in bytes."),
+  D("os.uname()", "Firmware and board version info."),
+ ]},
+ { grp: "Other modules", id: "utime", t: "utime", imp: "import utime", intro: "Timing. Also importable as <code>time</code>.", e: [
+  D("sleep(s), sleep_ms(ms), sleep_us(us)", "Wait in seconds (float allowed), milliseconds or microseconds."),
+  D("ticks_ms(), ticks_us()", "A counter that wraps around. Only use it through <code>ticks_diff</code>."),
+  D("ticks_add(t, delta), ticks_diff(new, old)", "Wrap-safe arithmetic on tick values.", { ex: "t0 = utime.ticks_ms()\n# ... work ...\nprint(utime.ticks_diff(utime.ticks_ms(), t0), 'ms')" }),
+ ]},
+ { grp: "Other modules", id: "random", t: "random", imp: "import random", intro: "Hardware-seeded random numbers.", e: [
+  D("randint(a, b)", "Integer with <code>a ≤ n ≤ b</code>."),
+  D("randrange(stop), randrange(start, stop[, step])", "Integer from a range, like <code>range()</code>."),
+  D("choice(seq)", "One random element."),
+  D("random(), uniform(a, b)", "Float in [0, 1) or between a and b."),
+  D("getrandbits(n), seed(n)", "<code>n</code> random bits, or a fixed seed for repeatable sequences."),
+ ]},
+ { grp: "Other modules", id: "neopixel", t: "neopixel", imp: "import neopixel", intro: "WS2812 LED strips, including the onboard RGB LED.", e: [
+  D("NeoPixel(pin, n, bpp=3)", "A strip of <code>n</code> LEDs. Set <code>np[i] = (r, g, b)</code> with values 0–255; <code>bpp=4</code> for RGBW strips."),
+  D("show(), clear()", "Send the colours to the strip, or switch all LEDs off."),
+ ]},
+ { grp: "Other modules", id: "machine", t: "machine", imp: "import machine", intro: "Low-level access.", e: [
+  D("unique_id()", "8 bytes that are unique to this chip."),
+  D("reset(), freq()", "Restart, or the CPU frequency in Hz (16 MHz)."),
+  D("disable_irq(), enable_irq(state)", "Pause interrupts for timing-critical code. Pass back the value <code>disable_irq()</code> returned."),
+  D("mem8[addr], mem16[addr], mem32[addr]", "Read or write memory and registers directly."),
+  D("time_pulse_us(pin, pulse_level, timeout_us=1000000)", "Length of the next pulse at <code>pulse_level</code> in µs, e.g. for ultrasonic distance sensors. Negative on timeout."),
+ ]},
+ { grp: "Other modules", id: "core", t: "Core modules", imp: "gc, math, struct …", intro: "Standard MicroPython modules compiled into this build.", e: [
+  D("gc.collect(), gc.mem_free(), gc.mem_alloc(), gc.enable(), gc.disable()", "Garbage collector. With about 9 KB free after boot, call <code>gc.collect()</code> before big allocations."),
+  D("micropython.mem_info(), micropython.const(x)", "Print memory usage; <code>const()</code> saves RAM for module-level constants."),
+  D("math", "sqrt, sin, cos, tan, atan2, pow, exp, log, floor, ceil, fabs, pi, e and the rest of the float functions (single precision)."),
+  D("struct, array, collections", "<code>struct.pack/unpack</code>, typed <code>array</code>, and <code>namedtuple</code> / <code>OrderedDict</code>."),
+  D("sys", "<code>sys.platform</code> is <code>'microbit'</code>; also <code>sys.version</code>, <code>sys.implementation</code>, <code>sys.exit()</code>."),
+  D("this, antigravity, love", "Easter eggs. Try <code>import this</code>."),
+ ]},
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const strip = h => h.replace(/<[^>]+>/g, "");
+
+/* Heart in the header matrix */
+"09090:99999:99999:09990:00900".split(":").join("").split("").forEach(v => {
+  const i = document.createElement("i");
+  if (v !== "0") { i.style.background = "var(--led)"; i.style.opacity = (0.25 + 0.75 * v / 9).toFixed(2); }
+  $("#matrix").appendChild(i);
+});
+
+/* Pin table */
+$("#pintable tbody").innerHTML = PINS.map(([n, g, t, use, st, label]) =>
+  `<tr data-search="${esc((n + " " + g + " " + t + " " + use + " " + label).toLowerCase())}"><td class="mono">${n}</td><td class="mono">${g}</td><td>${t}</td><td>${esc(use)}</td><td><span class="st ${st}">${label}</span></td></tr>`).join("");
+
+/* Modules + index */
+let nav = "", lastGrp = "";
+nav += `<span class="grp">Start</span><a href="#traps">Read this first</a><a href="#pins">Pin map</a>`;
+$("#modules").innerHTML = MODULES.map(m => {
+  if (m.grp !== lastGrp) { nav += `<span class="grp">${m.grp}</span>`; lastGrp = m.grp; }
+  nav += `<a href="#${m.id}" data-for="${m.id}">${esc(m.t)}</a>`;
+  const rows = m.e.map(x => {
+    const name = x.s.match(/^[\w.]+/);
+    const sig = name ? `<span class="n">${esc(name[0])}</span>${esc(x.s.slice(name[0].length))}` : esc(x.s);
+    const hay = (m.t + " " + m.imp + " " + x.s + " " + strip(x.d) + " " + (x.note || "") + " " + (x.ex || "")).toLowerCase();
+    return `<div class="entry" data-search="${esc(hay)}">
+      <div class="sig">${sig}</div>
+      <div class="d"><p>${x.d}</p></div>
+      ${x.note ? `<div class="note${x.bad ? " bad" : ""}">${esc(x.note)}</div>` : ""}
+      ${x.ex ? `<pre><button class="copy" type="button">Copy</button><code>${esc(x.ex)}</code></pre>` : ""}
+    </div>`;
+  }).join("");
+  return `<section id="${m.id}"><h2>${esc(m.t)} <span class="imp">${esc(m.imp)}</span></h2><p class="intro">${m.intro}</p><div class="entries">${rows}</div></section>`;
+}).join("");
+$("#index").innerHTML = nav;
+
+/* Copy buttons */
+document.addEventListener("click", e => {
+  const b = e.target.closest(".copy"); if (!b) return;
+  const code = b.nextElementSibling;
+  const done = t => { b.textContent = t; setTimeout(() => b.textContent = "Copy", 1400); };
+  navigator.clipboard?.writeText(code.textContent).then(() => done("Copied"), () => {
+    const r = document.createRange(); r.selectNodeContents(code);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r); done("Selected");
+  }) ?? done("Select");
+});
+
+/* Filter */
+const total = document.querySelectorAll(".entry").length;
+function filter() {
+  const q = $("#q").value.trim().toLowerCase();
+  let shown = 0;
+  document.querySelectorAll("#modules section").forEach(sec => {
+    let any = 0;
+    sec.querySelectorAll(".entry").forEach(en => {
+      const ok = !q || en.dataset.search.includes(q) || sec.querySelector("h2").textContent.toLowerCase().includes(q);
+      en.hidden = !ok; if (ok) any++;
+    });
+    sec.hidden = !any; shown += any;
+    const link = document.querySelector(`nav a[data-for="${sec.id}"]`);
+    if (link) link.classList.toggle("dim", !any);
+  });
+  let pinsShown = 0;
+  document.querySelectorAll("#pintable tbody tr").forEach(tr => {
+    const ok = !q || tr.dataset.search.includes(q); tr.hidden = !ok; if (ok) pinsShown++;
+  });
+  $("#pins").hidden = !!q && !pinsShown;
+  $("#traps").hidden = !!q;
+  $("#none").hidden = !(q && !shown && !pinsShown);
+  $("#count").textContent = q ? `${shown} of ${total} entries · ${pinsShown} pins` : `${total} entries · ${PINS.length} pins`;
+}
+$("#q").addEventListener("input", filter);
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement !== $("#q")) { e.preventDefault(); $("#q").focus(); }
+  if (e.key === "Escape" && document.activeElement === $("#q")) { $("#q").value = ""; filter(); }
+});
+filter();
+</script>

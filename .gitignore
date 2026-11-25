@@ -1,0 +1,6 @@
+# Downloaded by setup.sh: toolchain, uv, its Python and cache
+/tools/*
+# ...except the srec_cat stand-in, which is ours
+!/tools/srec_cat
+/.venv/
+__pycache__/

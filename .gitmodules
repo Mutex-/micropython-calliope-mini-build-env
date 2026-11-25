@@ -1,0 +1,4 @@
+[submodule "micropython"]
+	path = micropython
+	url = https://github.com/Mutex-/micropython-calliope-mini.git
+	branch = calliope-v1-fixes
