@@ -34,7 +34,20 @@ The REPL runs at 115200 baud: `picocom /dev/ttyACM0 -b 115200`.
 >>> display.scroll("Hallo")
 ```
 
-To push a script: `micropython/tools/pyboard.py /dev/ttyACM0 ../scripts/test.py`
+### Running scripts from the PC
+
+```sh
+source env.sh
+micropython/tools/pyboard.py /dev/ttyACM0 ../scripts/test.py   # runs it, prints its output
+```
+
+`pyboard.py` needs pyserial, which `setup.sh` installs into `.venv`. Close any `picocom` session first: two programs on one serial port each get part of the data.
+
+The scripts in `micropython/examples/` are written for the micro:bit and mostly start with `from microbit import *` or `import microbit`. This firmware's module is `calliopemini`, so change that line (`import calliopemini as microbit` keeps the rest of a script working).
+
+### Extra Python packages
+
+After `source env.sh`, `pip install <package>` installs into `.venv`. Without `env.sh`, `pip` is Arch's system pip, which refuses with "externally-managed-environment". `uv pip install <package>` also targets `.venv` once `env.sh` is sourced.
 
 ## Docker / Podman
 

@@ -30,13 +30,18 @@ fi
 
 source "$ROOT/env.sh"
 
-if [ ! -x .venv/bin/yotta ]; then
-  echo ">> Python 3.8 venv + yotta"
+if [ ! -x .venv/bin/python ]; then
+  echo ">> Python 3.8 venv"
   uv venv -q --python 3.8 .venv
-  # yotta is unmaintained: CMake must be <4 and markupsafe <2.1 (jinja2 soft_unicode)
-  uv pip install -q --python .venv/bin/python \
-    yotta==0.20.5 cmake==3.22.3 ninja==1.10.2.3 'markupsafe<2.1'
 fi
+# Runs every time so existing venvs pick up additions; a no-op when all is present.
+#  - yotta is unmaintained: CMake must be <4 and markupsafe <2.1 (jinja2 soft_unicode)
+#  - pyserial for micropython/tools/pyboard.py (run scripts on the board)
+#  - pip, because uv venvs come without it: otherwise "pip install" falls through
+#    to the system pip, which refuses with "externally-managed-environment"
+echo ">> Python packages"
+uv pip install -q --python .venv/bin/python \
+  yotta==0.20.5 cmake==3.22.3 ninja==1.10.2.3 'markupsafe<2.1' pyserial==3.5 pip
 
 if [ ! -e micropython/.git ]; then
   if [ -f .gitmodules ] && git rev-parse --git-dir >/dev/null 2>&1; then
