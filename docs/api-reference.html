@@ -142,7 +142,6 @@ footer { color: var(--muted); font-size: var(--s-1); border-top: 1px solid var(-
       <h2>Read this first</h2>
       <p class="intro">The Calliope port changed the pin table but kept parts of the micro:bit's setup. Everything here was checked on a Calliope mini v1 on 25 Nov 2026. The green cards are bugs fixed in this build; the stock firmware still has them.</p>
       <div class="traps">
-        <div class="trap"><span class="sev bad">Breaks code</span><h3>Import <code>calliopemini</code></h3><p>There is no <code>microbit</code> module, so <code>import microbit</code> raises <code>ImportError</code>. To keep micro:bit code working, use <code>import calliopemini as microbit</code>. The REPL already runs <code>from calliopemini import *</code>.</p></div>
         <div class="trap"><span class="sev bad">AttributeError</span><h3>Only pin1 and pin2 are touch pins</h3><p><code>pin0</code> is digital only on this port, so <code>pin0.is_touched()</code> fails. Use <code>pin1</code> or <code>pin2</code>.</p></div>
         <div class="trap"><span class="sev warn">Wrong pins</span><h3>SPI defaults sit on the LED rows</h3><p>The defaults pin13, pin14 and pin15 drive the matrix rows. Pass <code>sclk=</code>, <code>mosi=</code> and <code>miso=</code> explicitly, or turn the display off first.</p></div>
         <div class="trap"><span class="sev warn">Silent</span><h3><code>audio</code> and <code>speech</code> play on pad P0</h3><p>Both default to <code>pin0</code>, so you hear nothing without an external speaker. For the onboard speaker, call <code>pin_M_SLEEP.write_digital(1)</code> and pass <code>pin=pin_M_IN1</code> to <code>audio.play()</code>. <code>speech</code> has no pin argument.</p></div>
@@ -151,6 +150,7 @@ footer { color: var(--muted); font-size: var(--s-1); border-top: 1px solid var(-
         <div class="trap"><span class="sev ok">Fixed in this build</span><h3><code>pin16</code> and <code>pin17</code> analog reads</h3><p><code>read_analog()</code> works on P0.26 and P0.27. On the stock firmware it freezes the board, because mbed's ADC table stops at P0.6.</p></div>
         <div class="trap"><span class="sev ok">Fixed in this build</span><h3>I2C on the Calliope's pins</h3><p>The bus defaults to pin20 (SDA) and pin19 (SCL), where the onboard sensors are, so <code>i2c.scan()</code> finds <code>0x10</code>, <code>0x18</code> and <code>0x68</code> without arguments. That also frees <code>pin0</code> and <code>pin_M_IN2</code>. The stock firmware uses the micro:bit's P0.30/P0.0.</p></div>
         <div class="trap"><span class="sev ok">Fixed in this build</span><h3><code>music</code> plays on the speaker</h3><p><code>music.play()</code> and <code>music.pitch()</code> default to the onboard speaker and wake the motor driver only while sound plays. Pass <code>pin=pin0</code> for pad P0. The stock firmware plays on pad P0.</p></div>
+        <div class="trap"><span class="sev ok">Fixed in this build</span><h3><code>import microbit</code> works</h3><p><code>microbit</code> is an alias for <code>calliopemini</code> (the same module object), so micro:bit scripts run unchanged; all 31 examples in the firmware repository start without errors. The stock firmware only has <code>calliopemini</code> and raises <code>ImportError</code>.</p></div>
         <div class="trap"><span class="sev ok">New in this build</span><h3><code>gyroscope</code></h3><p>Rotation rates from the BMX055's gyroscope, in degrees per second. See <a href="#gyroscope">gyroscope</a>.</p></div>
       </div>
     </section>
@@ -214,7 +214,7 @@ const PINS = [
 /* Sections: id, title, import line, intro, entries [signature, description(html), note?, example?] */
 const D = (s, d, o = {}) => ({ s, d, ...o });
 const MODULES = [
- { grp: "calliopemini", id: "board", t: "Board functions", imp: "from calliopemini import *", intro: "Top-level functions of the <code>calliopemini</code> module.", e: [
+ { grp: "calliopemini", id: "board", t: "Board functions", imp: "from calliopemini import *", intro: "Top-level functions of the <code>calliopemini</code> module, also importable as <code>microbit</code>. The REPL starts with <code>from calliopemini import *</code> already done.", e: [
   D("sleep(ms)", "Wait <code>ms</code> milliseconds. The display, music and radio keep running in the background."),
   D("running_time()", "Milliseconds since the board powered on or reset."),
   D("temperature()", "Temperature in °C as an int, read from the nRF51 die. It reads a few degrees above room temperature."),

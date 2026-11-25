@@ -43,7 +43,7 @@ micropython/tools/pyboard.py /dev/ttyACM0 ../scripts/test.py   # runs it, prints
 
 `pyboard.py` needs pyserial, which `setup.sh` installs into `.venv`. Close any `picocom` session first: two programs on one serial port each get part of the data.
 
-The scripts in `micropython/examples/` are written for the micro:bit and mostly start with `from microbit import *` or `import microbit`. This firmware's module is `calliopemini`, so change that line (`import calliopemini as microbit` keeps the rest of a script working).
+The scripts in `micropython/examples/` are written for the micro:bit and import `microbit`. This firmware's module is `calliopemini`, and `microbit` is an alias for it, so they run unchanged. All 31 started without errors on a Calliope mini v1.
 
 ### Extra Python packages
 
@@ -69,6 +69,7 @@ The `Dockerfile` builds a toolchain-only image: Python 3.8, yotta and the pinned
 - **yotta** is unmaintained and its registry is offline. The target and all modules are pulled from GitHub.
 - **CMake 4.x** (the Arch system version) won't accept the old `cmake_minimum_required` used by yotta, so the venv ships CMake 3.22.
 - **markupsafe ≥ 2.1** removed `soft_unicode`, which yotta's jinja2 still imports.
+- **Header dependencies:** yotta's `mbed-gcc` target uses CMake's pre-3.20 placeholder `<DEPFILE>` in its dependency flags. CMake 3.22 doesn't expand it, so ninja recorded no header dependencies and changing a header recompiled nothing. The firmware Makefile corrects the downloaded target before every build, and rebuilds from clean the first time.
 - The fork's **`master`** branch is plain BBC micro:bit code. The Calliope pins, buttons, RGB LED, motor and mic are on `v1.1.1-cmini_classic`.
 
 ## Adding Python names (qstrs)
@@ -78,6 +79,6 @@ New names visible from Python (a module attribute, a method, a type name) are ha
 `make all` regenerates `inc/genhdr/qstrdefs.generated.h` whenever a file in `source/` or `inc/microbit/` has changed (about 3 s), via `tools/updateqstrs.sh`:
 
 - **Table unchanged:** the old header is put back with its original timestamp, so nothing recompiles.
-- **Table changed:** `build/bbc-microbit-classic-gcc-nosd` is removed first and the firmware builds from clean. New names shift every name's number, and an incremental build keeps some objects compiled against the old table; that firmware hangs at boot with no REPL.
+- **Table changed:** `build/bbc-microbit-classic-gcc-nosd` is removed first and the firmware builds from clean. New names shift every name's number and nearly every object includes the table, so this costs little, and it keeps the build consistent even where header tracking falls short. (Before header dependencies were fixed, an incremental build left objects compiled against the old table, and that firmware hung at boot with no REPL.)
 
 Commit the regenerated header together with the change that caused it. `make -C micropython qstrs` forces a regeneration without any source change.
