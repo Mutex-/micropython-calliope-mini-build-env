@@ -41,14 +41,14 @@ To push a script: `micropython/tools/pyboard.py /dev/ttyACM0 ../scripts/test.py`
 The `Dockerfile` builds a toolchain-only image: Python 3.8, yotta and the pinned versions from `docker/requirements.txt`, ARM GCC 10.3 for amd64 or arm64, and the real `srecord`. The source tree isn't copied into the image. It's bind-mounted when the container runs.
 
 ```sh
-docker build -t calliope-mpy .     # optional: docker-build.sh builds the image if it's missing
 ./docker-build.sh                  # make all -> micropython/build/firmware.hex
-./docker-build.sh make qstrs       # any command, run inside micropython/
+./docker-build.sh make qstrs       # any command, run inside micropython/ (here: force a qstr regeneration)
 ./docker-build.sh bash             # shell in the container
 ```
 
-- The wrapper works with either `docker` or `podman`. It runs as your uid so build files stay yours, and it clones the source if `micropython/` is missing.
-- The source is mounted at its host path because yotta writes absolute paths. If the CMake cache came from the host toolchain, the container wipes `build/bbc-microbit-classic-gcc-nosd` once. When you switch back to a native build, run `rm -rf micropython/build` first.
+- The wrapper works with either `docker` or `podman`. It runs as your uid so build files stay yours, and it initialises the `micropython` submodule if needed.
+- The image is built on first use and rebuilt automatically whenever `Dockerfile` or `docker/` changes (it carries a hash of them as a label).
+- The whole repository is mounted at its host path: yotta writes absolute paths, and in a submodule checkout the firmware's git data lives in `.git/modules/`, which the version header needs. If the CMake cache came from the host toolchain, the container wipes `build/bbc-microbit-classic-gcc-nosd` once. When you switch back to a native build, run `rm -rf micropython/build` first.
 - yotta modules are fetched only if they're missing. Set `FORCE_YOTTA_UP=1` to refresh them.
 
 ## Why these pins
@@ -60,15 +60,11 @@ docker build -t calliope-mpy .     # optional: docker-build.sh builds the image 
 
 ## Adding Python names (qstrs)
 
-New names visible from Python (a module attribute, a method, a type name) need two steps:
+New names visible from Python (a module attribute, a method, a type name) are handled by the build. Use them as `MP_QSTR_name` in the C code, or add `Q(name)` to `micropython/inc/microbit/qstrdefsport.h`, then run `make -C micropython all` as usual (or `./docker-build.sh`).
 
-1. Add `Q(name)` to `micropython/inc/microbit/qstrdefsport.h`. Names used as `MP_QSTR_name` in the C code are also picked up automatically.
-2. Regenerate the table, then do a **clean** build:
+`make all` regenerates `inc/genhdr/qstrdefs.generated.h` whenever a file in `source/` or `inc/microbit/` has changed (about 3 s), via `tools/updateqstrs.sh`:
 
-   ```sh
-   source env.sh
-   (cd micropython && ./tools/makeqstrhdr.sh && rm -rf inc/genhdr/qstr inc/genhdr/qstr*.i.last inc/genhdr/qstrdefs.collected.h* inc/genhdr/qstrdefs.preprocessed.h)
-   rm -rf micropython/build && make -C micropython all
-   ```
+- **Table unchanged:** the old header is put back with its original timestamp, so nothing recompiles.
+- **Table changed:** `build/bbc-microbit-classic-gcc-nosd` is removed first and the firmware builds from clean. New names shift every name's number, and an incremental build keeps some objects compiled against the old table; that firmware hangs at boot with no REPL.
 
-This branch's Makefile has no `qstrs` target. The clean build matters: regenerating shifts every name's number, and an incremental build keeps some objects compiled against the old table. Firmware built that way hangs at boot with no REPL.
+Commit the regenerated header together with the change that caused it. `make -C micropython qstrs` forces a regeneration without any source change.

@@ -26,16 +26,27 @@ if [ ! -e "$SRC/.git" ]; then
   fi
 fi
 
-if ! "$RT" image inspect "$IMAGE" >/dev/null 2>&1; then
-  "$RT" build -t "$IMAGE" .
+# Rebuild the image when the files that define it change, not only when it's missing.
+hash=$(cat Dockerfile docker/* | sha256sum | cut -c1-16)
+have=$("$RT" image inspect -f '{{ index .Config.Labels "calliope.env-hash" }}' "$IMAGE" 2>/dev/null || true)
+if [ "$have" != "$hash" ]; then
+  "$RT" build --label "calliope.env-hash=$hash" -t "$IMAGE" .
 fi
 
 tty=(); [ -t 0 ] && tty=(-it)
 cmd=("$@"); [ ${#cmd[@]} -eq 0 ] && cmd=(make all)
 
-# Mount at the same absolute path as on the host: yotta writes absolute paths
+# Mount at the same absolute paths as on the host: yotta writes absolute paths
 # into build/ and .yotta.json, so host and container builds stay interchangeable.
+# The whole repository goes in, not just micropython/: in a submodule checkout the
+# firmware's git data lives in .git/modules/, which makeversionhdr.py needs.
+mounts=(-v "$PWD:$PWD")
+case "$SRC/" in
+  "$PWD"/*) ;;
+  *) mounts+=(-v "$SRC:$SRC") ;;
+esac
+
 exec "$RT" run --rm "${tty[@]}" "${userargs[@]}" \
   -e FORCE_YOTTA_UP="${FORCE_YOTTA_UP:-0}" \
-  -v "$SRC:$SRC" -w "$SRC" \
+  "${mounts[@]}" -w "$SRC" \
   "$IMAGE" "${cmd[@]}"
